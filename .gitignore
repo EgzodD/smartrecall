@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+*.egg-info/
+.pytest_cache/
+
+# Data & models (large/binary — do not commit)
+ml/data/*
+!ml/data/.gitkeep
+*.csv
+*.parquet
+*.pkl
+*.joblib
+*.h5
+
+# Backend
+backend/.env
+
+# Flutter / Dart
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/build/
+mobile/**/generated_plugin_registrant.dart
+
+# macOS
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
