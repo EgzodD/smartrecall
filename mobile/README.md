@@ -9,6 +9,10 @@ Flutter-приложение: карточки, кнопки "Помню"/"Не 
 - `lib/services/storage_service.dart` — локальное хранилище на Hive, офлайн по умолчанию
 - `lib/services/api_service.dart` — запрос к backend `/predict_interval`
 - `lib/services/scheduler.dart` — после ответа "помню/не помню" запрашивает у модели интервал до следующего повторения; если backend недоступен — считает интервал по простой эвристике (удвоение/сброс) и помечает карточку `synced: false`, чтобы досчитать через модель при следующем подключении
+- `lib/services/sync_service.dart` — синхронизация с backend `/sync/{user_id}` (push + merge + pull за один запрос)
+- `lib/screens/deck_screen.dart`, `add_card_screen.dart` — свои карточки: список, добавление, удаление свайпом
+- `lib/screens/stats_screen.dart` — прогресс: всего карточек, к повторению, точность, ближайшие повторения
+- `lib/screens/sync_screen.dart` — код устройства для синхронизации между устройствами
 - `lib/seed_data.dart` — стартовая колода из 10 немецких слов, чтобы было что повторять сразу после установки
 
 ## Запуск
