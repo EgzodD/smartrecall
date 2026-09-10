@@ -38,7 +38,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   void _resyncUnsyncedInBackground() {
     for (final card in widget.storage.getAll().where((c) => !c.synced)) {
-      widget.scheduler.resync(card).then((updated) {
+      widget.scheduler.resync(card, userId: widget.storage.syncId).then((updated) {
         if (updated.synced) widget.storage.put(updated);
       });
     }
@@ -48,7 +48,11 @@ class _ReviewScreenState extends State<ReviewScreen> {
     if (_due.isEmpty || _busy) return;
     setState(() => _busy = true);
     final current = _due.first;
-    final updated = await widget.scheduler.reviewCard(current, remembered: remembered);
+    final updated = await widget.scheduler.reviewCard(
+      current,
+      remembered: remembered,
+      userId: widget.storage.syncId,
+    );
     await widget.storage.put(updated);
     setState(() {
       _due = widget.storage.getDue();

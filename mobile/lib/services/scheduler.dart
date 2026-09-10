@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../models/flashcard.dart';
 import 'api_service.dart';
 
@@ -11,10 +13,31 @@ class Scheduler {
 
   Scheduler(this.api);
 
-  Future<Flashcard> reviewCard(Flashcard card, {required bool remembered}) async {
+  Future<Flashcard> reviewCard(Flashcard card, {required bool remembered, String? userId}) async {
     final now = DateTime.now();
     final newHistorySeen = card.historySeen + 1;
     final newHistoryCorrect = card.historyCorrect + (remembered ? 1 : 0);
+    final deltaSinceLastReview =
+        card.lastReviewedAt == null ? null : now.difference(card.lastReviewedAt!).inSeconds;
+
+    if (userId != null) {
+      // Best-effort: personalization is a nice-to-have, never block scheduling on it.
+      unawaited(
+        api
+            .logReview(
+              userId: userId,
+              cardId: card.id,
+              lexemeId: card.lexemeId,
+              learningLanguage: card.learningLanguage,
+              historySeenBefore: card.historySeen,
+              historyCorrectBefore: card.historyCorrect,
+              deltaSeconds: deltaSinceLastReview,
+              remembered: remembered,
+              reviewedAt: now,
+            )
+            .catchError((_) {}),
+      );
+    }
 
     try {
       final prediction = await api.predictInterval(
@@ -22,6 +45,7 @@ class Scheduler {
         historyCorrect: newHistoryCorrect,
         lexemeId: card.lexemeId,
         learningLanguage: card.learningLanguage,
+        userId: userId,
       );
       return card.copyWith(
         historySeen: newHistorySeen,
@@ -47,7 +71,7 @@ class Scheduler {
 
   /// Retries scheduling for cards that fell back to the offline heuristic,
   /// replacing their due date with a real model prediction once reachable.
-  Future<Flashcard> resync(Flashcard card) async {
+  Future<Flashcard> resync(Flashcard card, {String? userId}) async {
     if (card.synced || card.lastReviewedAt == null) return card;
     try {
       final prediction = await api.predictInterval(
@@ -55,6 +79,7 @@ class Scheduler {
         historyCorrect: card.historyCorrect,
         lexemeId: card.lexemeId,
         learningLanguage: card.learningLanguage,
+        userId: userId,
       );
       return card.copyWith(
         dueAt: card.lastReviewedAt!.add(_daysToDuration(prediction.nextIntervalDays)),
