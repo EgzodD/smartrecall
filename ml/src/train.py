@@ -80,7 +80,15 @@ def main() -> None:
         )
     print(json.dumps(metrics, indent=2, ensure_ascii=False))
 
-    joblib.dump({"model": model, "lexeme_encoder": lexeme_encoder}, args.model_out)
+    joblib.dump(
+        {
+            "model": model,
+            "lexeme_encoder": lexeme_encoder,
+            "feature_columns": list(x_train.columns),
+            "languages": sorted(train_df["learning_language"].unique().tolist()),
+        },
+        args.model_out,
+    )
     print(f"saved model -> {args.model_out}")
 
 
