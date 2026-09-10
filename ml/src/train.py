@@ -8,6 +8,7 @@ import argparse
 import json
 
 import joblib
+import lightgbm as lgb
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import Ridge
@@ -16,6 +17,13 @@ from sklearn.model_selection import GroupShuffleSplit
 
 import baseline
 from features import LexemeDifficultyEncoder, add_half_life_target, build_features
+
+MODELS = {
+    "ridge": lambda: Ridge(alpha=1.0),
+    "lightgbm": lambda: lgb.LGBMRegressor(
+        n_estimators=200, num_leaves=31, learning_rate=0.05, verbosity=-1
+    ),
+}
 
 
 def recall_from_half_life(half_life: pd.Series, delta_days: pd.Series) -> np.ndarray:
@@ -32,6 +40,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", default="../data/sample.csv")
     parser.add_argument("--model-out", default="../models/hlr_model.joblib")
+    parser.add_argument("--model", choices=list(MODELS), default="ridge")
     args = parser.parse_args()
 
     df = pd.read_csv(args.data)
@@ -44,7 +53,7 @@ def main() -> None:
     x_test = x_test.reindex(columns=x_train.columns, fill_value=0.0)
 
     y_train = np.log2(train_df["half_life"])
-    model = Ridge(alpha=1.0)
+    model = MODELS[args.model]()
     model.fit(x_train, y_train)
 
     pred_half_life = np.exp2(model.predict(x_test))
@@ -55,14 +64,20 @@ def main() -> None:
     mae_baseline = mean_absolute_error(test_df["p_recall"], pred_recall_baseline)
 
     metrics = {
+        "model": args.model,
         "n_train": len(train_df),
         "n_test": len(test_df),
         "mae_recall_baseline_leitner": mae_baseline,
         "mae_recall_hlr": mae_hlr,
         "features": list(x_train.columns),
-        "coef": dict(zip(x_train.columns, model.coef_.tolist())),
-        "intercept": float(model.intercept_),
     }
+    if hasattr(model, "coef_"):
+        metrics["coef"] = dict(zip(x_train.columns, model.coef_.tolist()))
+        metrics["intercept"] = float(model.intercept_)
+    elif hasattr(model, "feature_importances_"):
+        metrics["feature_importances"] = dict(
+            zip(x_train.columns, model.feature_importances_.tolist())
+        )
     print(json.dumps(metrics, indent=2, ensure_ascii=False))
 
     joblib.dump({"model": model, "lexeme_encoder": lexeme_encoder}, args.model_out)
