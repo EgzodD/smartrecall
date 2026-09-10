@@ -12,7 +12,9 @@ const supportedLanguages = <String, String>{
 };
 
 class AddCardScreen extends StatefulWidget {
-  const AddCardScreen({super.key});
+  final Future<void> Function(Flashcard card) onSave;
+
+  const AddCardScreen({super.key, required this.onSave});
 
   @override
   State<AddCardScreen> createState() => _AddCardScreenState();
@@ -23,6 +25,7 @@ class _AddCardScreenState extends State<AddCardScreen> {
   final _frontController = TextEditingController();
   final _backController = TextEditingController();
   String _language = 'de';
+  bool _addAnother = false;
 
   @override
   void dispose() {
@@ -31,7 +34,7 @@ class _AddCardScreenState extends State<AddCardScreen> {
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     final front = _frontController.text.trim();
     final card = Flashcard(
@@ -42,7 +45,22 @@ class _AddCardScreenState extends State<AddCardScreen> {
       back: _backController.text.trim(),
       dueAt: DateTime.now(),
     );
-    Navigator.of(context).pop(card);
+    await widget.onSave(card);
+
+    if (!_addAnother) {
+      if (mounted) Navigator.of(context).pop();
+      return;
+    }
+
+    _frontController.clear();
+    _backController.clear();
+    if (mounted) {
+      FocusScope.of(context).requestFocus(FocusNode());
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Добавлено: $front'), duration: const Duration(seconds: 1)),
+      );
+      setState(() {});
+    }
   }
 
   @override
@@ -78,7 +96,13 @@ class _AddCardScreenState extends State<AddCardScreen> {
                 ],
                 onChanged: (v) => setState(() => _language = v!),
               ),
-              const SizedBox(height: 24),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Добавить ещё после сохранения'),
+                value: _addAnother,
+                onChanged: (v) => setState(() => _addAnother = v),
+              ),
+              const SizedBox(height: 12),
               FilledButton(onPressed: _save, child: const Text('Добавить')),
             ],
           ),

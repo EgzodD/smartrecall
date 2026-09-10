@@ -59,6 +59,13 @@ class _ReviewScreenState extends State<ReviewScreen> {
       _revealed = false;
       _busy = false;
     });
+    if (!updated.synced && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Офлайн: интервал приблизительный, пересчитаем при подключении'),
+        ),
+      );
+    }
   }
 
   Future<void> _openDeck() async {
@@ -145,21 +152,27 @@ class _ReviewScreenState extends State<ReviewScreen> {
           ),
           const SizedBox(height: 24),
           if (_revealed)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton(
-                  onPressed: _busy ? null : () => _answer(false),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade100),
-                  child: const Text('Не помню'),
-                ),
-                ElevatedButton(
-                  onPressed: _busy ? null : () => _answer(true),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade100),
-                  child: const Text('Помню'),
-                ),
-              ],
-            ),
+            _busy
+                ? const SizedBox(
+                    height: 36,
+                    width: 36,
+                    child: CircularProgressIndicator(strokeWidth: 3),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () => _answer(false),
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade100),
+                        child: const Text('Не помню'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => _answer(true),
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade100),
+                        child: const Text('Помню'),
+                      ),
+                    ],
+                  ),
           const SizedBox(height: 12),
           Text('осталось сегодня: ${_due.length}', style: const TextStyle(color: Colors.grey)),
         ],

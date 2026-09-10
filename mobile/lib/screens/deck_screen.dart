@@ -30,17 +30,35 @@ class _DeckScreenState extends State<DeckScreen> {
   }
 
   Future<void> _addCard() async {
-    final card = await Navigator.of(context).push<Flashcard>(
-      MaterialPageRoute(builder: (_) => const AddCardScreen()),
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AddCardScreen(
+          onSave: (card) async {
+            await widget.storage.put(card);
+            _refresh();
+          },
+        ),
+      ),
     );
-    if (card == null) return;
-    await widget.storage.put(card);
     _refresh();
   }
 
   Future<void> _deleteCard(Flashcard card) async {
     await widget.storage.delete(card.id);
     _refresh();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Удалено: ${card.front}'),
+        action: SnackBarAction(
+          label: 'Отменить',
+          onPressed: () async {
+            await widget.storage.put(card);
+            _refresh();
+          },
+        ),
+      ),
+    );
   }
 
   @override
