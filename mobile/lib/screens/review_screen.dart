@@ -3,14 +3,22 @@ import 'package:flutter/material.dart';
 import '../models/flashcard.dart';
 import '../services/scheduler.dart';
 import '../services/storage_service.dart';
+import '../services/sync_service.dart';
 import 'deck_screen.dart';
 import 'stats_screen.dart';
+import 'sync_screen.dart';
 
 class ReviewScreen extends StatefulWidget {
   final StorageService storage;
   final Scheduler scheduler;
+  final SyncService syncService;
 
-  const ReviewScreen({super.key, required this.storage, required this.scheduler});
+  const ReviewScreen({
+    super.key,
+    required this.storage,
+    required this.scheduler,
+    required this.syncService,
+  });
 
   @override
   State<ReviewScreen> createState() => _ReviewScreenState();
@@ -62,12 +70,22 @@ class _ReviewScreenState extends State<ReviewScreen> {
     );
   }
 
+  Future<void> _openSync() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SyncScreen(storage: widget.storage, syncService: widget.syncService),
+      ),
+    );
+    setState(() => _due = widget.storage.getDue());
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('smartrecall'),
         actions: [
+          IconButton(onPressed: _openSync, icon: const Icon(Icons.sync)),
           IconButton(onPressed: _openStats, icon: const Icon(Icons.bar_chart)),
           IconButton(onPressed: _openDeck, icon: const Icon(Icons.style)),
         ],

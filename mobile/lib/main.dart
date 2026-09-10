@@ -5,6 +5,7 @@ import 'seed_data.dart';
 import 'services/api_service.dart';
 import 'services/scheduler.dart';
 import 'services/storage_service.dart';
+import 'services/sync_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +30,7 @@ class SmartRecallApp extends StatelessWidget {
       home: ReviewScreen(
         storage: storage,
         scheduler: Scheduler(ApiService()),
+        syncService: SyncService(),
       ),
     );
   }

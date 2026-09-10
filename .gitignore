@@ -18,6 +18,7 @@ ml/data/*
 
 # Backend
 backend/.env
+backend/data/
 
 # Flutter / Dart
 mobile/.dart_tool/
