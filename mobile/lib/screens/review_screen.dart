@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/flashcard.dart';
 import '../services/scheduler.dart';
 import '../services/storage_service.dart';
+import 'deck_screen.dart';
 
 class ReviewScreen extends StatefulWidget {
   final StorageService storage;
@@ -47,10 +48,22 @@ class _ReviewScreenState extends State<ReviewScreen> {
     });
   }
 
+  Future<void> _openDeck() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => DeckScreen(storage: widget.storage)),
+    );
+    setState(() => _due = widget.storage.getDue());
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('smartrecall')),
+      appBar: AppBar(
+        title: const Text('smartrecall'),
+        actions: [
+          IconButton(onPressed: _openDeck, icon: const Icon(Icons.style)),
+        ],
+      ),
       body: Center(
         child: _due.isEmpty ? _buildAllDone() : _buildCard(_due.first),
       ),

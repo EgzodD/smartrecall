@@ -28,4 +28,6 @@ class StorageService {
   Future<void> putAll(Iterable<Flashcard> cards) => _box.putAll({
         for (final c in cards) c.id: c.toMap(),
       });
+
+  Future<void> delete(String id) => _box.delete(id);
 }
