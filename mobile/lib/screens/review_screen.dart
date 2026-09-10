@@ -4,6 +4,7 @@ import '../models/flashcard.dart';
 import '../services/scheduler.dart';
 import '../services/storage_service.dart';
 import 'deck_screen.dart';
+import 'stats_screen.dart';
 
 class ReviewScreen extends StatefulWidget {
   final StorageService storage;
@@ -55,12 +56,19 @@ class _ReviewScreenState extends State<ReviewScreen> {
     setState(() => _due = widget.storage.getDue());
   }
 
+  void _openStats() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => StatsScreen(storage: widget.storage)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('smartrecall'),
         actions: [
+          IconButton(onPressed: _openStats, icon: const Icon(Icons.bar_chart)),
           IconButton(onPressed: _openDeck, icon: const Icon(Icons.style)),
         ],
       ),
