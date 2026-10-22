@@ -55,3 +55,42 @@ test, и `lexeme_difficulty` уже покрывает эту информаци
 train/test-сплит не измеряет (нужен был бы сплит с непересекающимся
 словарём лексем, не только пользователей) — честно зафиксировано как
 ограничение, а не как доказанное улучшение.
+
+## Замыкаем цикл: реальные данные из приложения → переобучение
+
+Backend логирует каждое "Помню"/"Не помню" в `review_events`
+(`backend/app/db.py`), но раньше это использовалось только для
+`_personal_factor()` — калибровочного коэффициента поверх модели, не для
+самого обучения. `src/export_from_backend.py` замыкает цикл:
+
+```bash
+cd ml/src
+python export_from_backend.py --out ../data/from_backend.csv
+```
+
+Экспортирует `review_events` из `backend/data/smartrecall.db` (читает
+файл напрямую, без импорта backend-пакета — у ml/ и backend/ разные venv
+и разные зависимости по дизайну) в ту же схему, что ожидает `train.py`.
+
+Дообучение — просто `pd.concat` с исходным датасетом перед вызовом
+`add_half_life_target`:
+
+```python
+import pandas as pd
+duolingo = pd.read_csv("data/settles.acl16.learning_traces.13m.csv")
+from_app = pd.read_csv("data/from_backend.csv")
+combined = pd.concat([duolingo, from_app], ignore_index=True)
+combined.to_csv("data/combined.csv", index=False)
+```
+
+```bash
+python src/train.py --data data/combined.csv --model-out models/hlr_model.joblib
+```
+
+У записей из `from_backend.csv` нет `lexeme_string` (у пользовательских
+карточек никогда не будет Apertium-тега) — `LexemePosEncoder`/`extract_pos`
+уже обрабатывают это как `"unk"`, пайплайн не ломается (проверено на
+реальных логах через `/log_review`). На малом количестве реальных событий
+заметного сдвига MAE не ждать — смысл шага в том, что механизм есть и
+работает, а не в объёме данных, которых пока физически мало (это не
+production с множеством пользователей).
