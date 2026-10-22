@@ -6,6 +6,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from . import db
@@ -33,6 +34,16 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="smartrecall", lifespan=lifespan)
+
+# Flutter web runs in the browser, so requests cross origins (dev server
+# port != 8000). Wide open for now (MVP, no auth beyond the sync device
+# code anyway) — tighten allow_origins before any real deployment.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class PredictIntervalRequest(BaseModel):
