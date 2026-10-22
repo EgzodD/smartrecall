@@ -1,10 +1,11 @@
 import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import joblib
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from pydantic import BaseModel
 
 from . import db
@@ -16,13 +17,22 @@ sys.path.insert(0, str(ML_SRC_DIR))
 
 from features import MAX_HALF_LIFE_DAYS, MIN_HALF_LIFE_DAYS, build_features  # noqa: E402
 
+# Module-level so tests can monkeypatch it before the TestClient triggers
+# lifespan (startup), pointing it at a small fixture model instead of the
+# real one.
 MODEL_PATH = Path(__file__).resolve().parents[2] / "ml" / "models" / "hlr_model.joblib"
 
-app = FastAPI(title="smartrecall")
-_artifact = joblib.load(MODEL_PATH)
-_model = _artifact["model"]
-_lexeme_encoder = _artifact["lexeme_encoder"]
-_feature_columns = _artifact["feature_columns"]
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    artifact = joblib.load(MODEL_PATH)
+    app.state.model = artifact["model"]
+    app.state.lexeme_encoder = artifact["lexeme_encoder"]
+    app.state.feature_columns = artifact["feature_columns"]
+    yield
+
+
+app = FastAPI(title="smartrecall", lifespan=lifespan)
 
 
 class PredictIntervalRequest(BaseModel):
@@ -149,12 +159,14 @@ def sync(user_id: str, request: SyncRequest) -> SyncResponse:
     )
 
 
-def _predict_half_life_days(df: pd.DataFrame) -> np.ndarray:
+def _predict_half_life_days(
+    df: pd.DataFrame, model, lexeme_encoder, feature_columns
+) -> np.ndarray:
     """Global-model half-life prediction (days), batched, no personalization."""
-    features = build_features(df, _lexeme_encoder).reindex(
-        columns=_feature_columns, fill_value=0.0
+    features = build_features(df, lexeme_encoder).reindex(
+        columns=feature_columns, fill_value=0.0
     )
-    log2_half_life = _model.predict(features)
+    log2_half_life = model.predict(features)
     return np.clip(2**log2_half_life, MIN_HALF_LIFE_DAYS, MAX_HALF_LIFE_DAYS)
 
 
@@ -164,7 +176,7 @@ _MIN_REVIEWS_FOR_PERSONALIZATION = 5
 _PERSONAL_FACTOR_CLIP = (0.3, 3.0)
 
 
-def _personal_factor(user_id: str) -> float | None:
+def _personal_factor(user_id: str, model, lexeme_encoder, feature_columns) -> float | None:
     conn = db.get_connection()
     rows = conn.execute(
         """
@@ -193,7 +205,7 @@ def _personal_factor(user_id: str) -> float | None:
             for r in rows
         ]
     )
-    predicted_hl = _predict_half_life_days(events)
+    predicted_hl = _predict_half_life_days(events, model, lexeme_encoder, feature_columns)
 
     p = events["p_recall"].clip(lower=1e-4, upper=1 - 1e-4)
     observed_hl = (-events["delta_days"] / np.log2(p)).clip(
@@ -233,7 +245,8 @@ def log_review(user_id: str, request: LogReviewRequest) -> dict:
 
 
 @app.post("/predict_interval", response_model=PredictIntervalResponse)
-def predict_interval(request: PredictIntervalRequest) -> PredictIntervalResponse:
+def predict_interval(request: PredictIntervalRequest, http_request: Request) -> PredictIntervalResponse:
+    state = http_request.app.state
     row = pd.DataFrame(
         [
             {
@@ -244,9 +257,15 @@ def predict_interval(request: PredictIntervalRequest) -> PredictIntervalResponse
             }
         ]
     )
-    half_life_days = float(_predict_half_life_days(row)[0])
+    half_life_days = float(
+        _predict_half_life_days(row, state.model, state.lexeme_encoder, state.feature_columns)[0]
+    )
 
-    personal_factor = _personal_factor(request.user_id) if request.user_id else None
+    personal_factor = (
+        _personal_factor(request.user_id, state.model, state.lexeme_encoder, state.feature_columns)
+        if request.user_id
+        else None
+    )
     if personal_factor is not None:
         half_life_days = float(
             np.clip(half_life_days * personal_factor, MIN_HALF_LIFE_DAYS, MAX_HALF_LIFE_DAYS)
