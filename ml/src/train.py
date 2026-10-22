@@ -16,7 +16,12 @@ from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import GroupShuffleSplit
 
 import baseline
-from features import LexemeDifficultyEncoder, add_half_life_target, build_features
+from features import (
+    LexemeDifficultyEncoder,
+    LexemePosEncoder,
+    add_half_life_target,
+    build_features,
+)
 
 MODELS = {
     "ridge": lambda: Ridge(alpha=1.0),
@@ -48,8 +53,9 @@ def main() -> None:
     train_df, test_df = train_test_split_by_user(df)
 
     lexeme_encoder = LexemeDifficultyEncoder().fit(train_df)
-    x_train = build_features(train_df, lexeme_encoder)
-    x_test = build_features(test_df, lexeme_encoder)
+    pos_encoder = LexemePosEncoder().fit(train_df)
+    x_train = build_features(train_df, lexeme_encoder, pos_encoder)
+    x_test = build_features(test_df, lexeme_encoder, pos_encoder)
     x_test = x_test.reindex(columns=x_train.columns, fill_value=0.0)
 
     y_train = np.log2(train_df["half_life"])
@@ -84,6 +90,7 @@ def main() -> None:
         {
             "model": model,
             "lexeme_encoder": lexeme_encoder,
+            "pos_encoder": pos_encoder,
             "feature_columns": list(x_train.columns),
             "languages": sorted(train_df["learning_language"].unique().tolist()),
         },

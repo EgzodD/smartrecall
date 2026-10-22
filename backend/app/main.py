@@ -29,6 +29,7 @@ async def lifespan(app: FastAPI):
     artifact = joblib.load(MODEL_PATH)
     app.state.model = artifact["model"]
     app.state.lexeme_encoder = artifact["lexeme_encoder"]
+    app.state.pos_encoder = artifact.get("pos_encoder")  # None for pre-POS-feature models
     app.state.feature_columns = artifact["feature_columns"]
     yield
 
@@ -171,10 +172,10 @@ def sync(user_id: str, request: SyncRequest) -> SyncResponse:
 
 
 def _predict_half_life_days(
-    df: pd.DataFrame, model, lexeme_encoder, feature_columns
+    df: pd.DataFrame, model, lexeme_encoder, pos_encoder, feature_columns
 ) -> np.ndarray:
     """Global-model half-life prediction (days), batched, no personalization."""
-    features = build_features(df, lexeme_encoder).reindex(
+    features = build_features(df, lexeme_encoder, pos_encoder).reindex(
         columns=feature_columns, fill_value=0.0
     )
     log2_half_life = model.predict(features)
@@ -187,7 +188,9 @@ _MIN_REVIEWS_FOR_PERSONALIZATION = 5
 _PERSONAL_FACTOR_CLIP = (0.3, 3.0)
 
 
-def _personal_factor(user_id: str, model, lexeme_encoder, feature_columns) -> float | None:
+def _personal_factor(
+    user_id: str, model, lexeme_encoder, pos_encoder, feature_columns
+) -> float | None:
     conn = db.get_connection()
     rows = conn.execute(
         """
@@ -216,7 +219,9 @@ def _personal_factor(user_id: str, model, lexeme_encoder, feature_columns) -> fl
             for r in rows
         ]
     )
-    predicted_hl = _predict_half_life_days(events, model, lexeme_encoder, feature_columns)
+    predicted_hl = _predict_half_life_days(
+        events, model, lexeme_encoder, pos_encoder, feature_columns
+    )
 
     p = events["p_recall"].clip(lower=1e-4, upper=1 - 1e-4)
     observed_hl = (-events["delta_days"] / np.log2(p)).clip(
@@ -269,11 +274,19 @@ def predict_interval(request: PredictIntervalRequest, http_request: Request) -> 
         ]
     )
     half_life_days = float(
-        _predict_half_life_days(row, state.model, state.lexeme_encoder, state.feature_columns)[0]
+        _predict_half_life_days(
+            row, state.model, state.lexeme_encoder, state.pos_encoder, state.feature_columns
+        )[0]
     )
 
     personal_factor = (
-        _personal_factor(request.user_id, state.model, state.lexeme_encoder, state.feature_columns)
+        _personal_factor(
+            request.user_id,
+            state.model,
+            state.lexeme_encoder,
+            state.pos_encoder,
+            state.feature_columns,
+        )
         if request.user_id
         else None
     )
