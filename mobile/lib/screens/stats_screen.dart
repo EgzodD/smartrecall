@@ -89,7 +89,7 @@ class _UpcomingTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDue = !card.dueAt.isAfter(DateTime.now());
-    final two = (int n) => n.toString().padLeft(2, '0');
+    String two(int n) => n.toString().padLeft(2, '0');
     final due = card.dueAt;
     final when = isDue
         ? 'сейчас'

@@ -51,11 +51,11 @@ class ApiService {
           body: jsonEncode({
             'history_seen': historySeen,
             'history_correct': historyCorrect,
-            if (lexemeId != null) 'lexeme_id': lexemeId,
-            if (learningLanguage != null) 'learning_language': learningLanguage,
-            if (deltaSeconds != null) 'delta': deltaSeconds,
+            'lexeme_id': ?lexemeId,
+            'learning_language': ?learningLanguage,
+            'delta': ?deltaSeconds,
             'target_recall': targetRecall,
-            if (userId != null) 'user_id': userId,
+            'user_id': ?userId,
           }),
         )
         .timeout(timeout);
@@ -85,11 +85,11 @@ class ApiService {
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'card_id': cardId,
-            if (lexemeId != null) 'lexeme_id': lexemeId,
-            if (learningLanguage != null) 'learning_language': learningLanguage,
+            'lexeme_id': ?lexemeId,
+            'learning_language': ?learningLanguage,
             'history_seen_before': historySeenBefore,
             'history_correct_before': historyCorrectBefore,
-            if (deltaSeconds != null) 'delta': deltaSeconds,
+            'delta': ?deltaSeconds,
             'remembered': remembered,
             'reviewed_at': reviewedAt.toIso8601String(),
           }),
