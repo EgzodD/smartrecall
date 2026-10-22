@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/flashcard.dart';
+import '../services/storage_service.dart';
 
 const supportedLanguages = <String, String>{
   'de': 'немецкий',
@@ -12,9 +13,10 @@ const supportedLanguages = <String, String>{
 };
 
 class AddCardScreen extends StatefulWidget {
+  final StorageService storage;
   final Future<void> Function(Flashcard card) onSave;
 
-  const AddCardScreen({super.key, required this.onSave});
+  const AddCardScreen({super.key, required this.storage, required this.onSave});
 
   @override
   State<AddCardScreen> createState() => _AddCardScreenState();
@@ -26,6 +28,8 @@ class _AddCardScreenState extends State<AddCardScreen> {
   final _backController = TextEditingController();
   String _language = 'de';
   bool _addAnother = false;
+  String? _topicId;
+  String? _subtopicId;
 
   @override
   void dispose() {
@@ -44,6 +48,8 @@ class _AddCardScreenState extends State<AddCardScreen> {
       front: front,
       back: _backController.text.trim(),
       dueAt: DateTime.now(),
+      topicId: _topicId,
+      subtopicId: _subtopicId,
     );
     await widget.onSave(card);
 
@@ -96,6 +102,33 @@ class _AddCardScreenState extends State<AddCardScreen> {
                 ],
                 onChanged: (v) => setState(() => _language = v!),
               ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String?>(
+                initialValue: _topicId,
+                decoration: const InputDecoration(labelText: 'Тема'),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('Без темы')),
+                  for (final t in widget.storage.getTopics())
+                    DropdownMenuItem(value: t.id, child: Text(t.name)),
+                ],
+                onChanged: (v) => setState(() {
+                  _topicId = v;
+                  _subtopicId = null;
+                }),
+              ),
+              if (_topicId != null) ...[
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String?>(
+                  initialValue: _subtopicId,
+                  decoration: const InputDecoration(labelText: 'Подтема'),
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('Без подтемы')),
+                    for (final s in widget.storage.getSubtopics(_topicId!))
+                      DropdownMenuItem(value: s.id, child: Text(s.name)),
+                  ],
+                  onChanged: (v) => setState(() => _subtopicId = v),
+                ),
+              ],
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Добавить ещё после сохранения'),

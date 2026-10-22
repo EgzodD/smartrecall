@@ -33,6 +33,7 @@ class _DeckScreenState extends State<DeckScreen> {
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => AddCardScreen(
+          storage: widget.storage,
           onSave: (card) async {
             await widget.storage.put(card);
             _refresh();

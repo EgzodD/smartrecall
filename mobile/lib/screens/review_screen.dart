@@ -7,6 +7,7 @@ import '../services/sync_service.dart';
 import 'deck_screen.dart';
 import 'stats_screen.dart';
 import 'sync_screen.dart';
+import 'topics_screen.dart';
 
 class ReviewScreen extends StatefulWidget {
   final StorageService storage;
@@ -90,12 +91,20 @@ class _ReviewScreenState extends State<ReviewScreen> {
     setState(() => _due = widget.storage.getDue());
   }
 
+  Future<void> _openTopics() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => TopicsScreen(storage: widget.storage)),
+    );
+    setState(() => _due = widget.storage.getDue());
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('smartrecall'),
         actions: [
+          IconButton(onPressed: _openTopics, icon: const Icon(Icons.category)),
           IconButton(onPressed: _openSync, icon: const Icon(Icons.sync)),
           IconButton(onPressed: _openStats, icon: const Icon(Icons.bar_chart)),
           IconButton(onPressed: _openDeck, icon: const Icon(Icons.style)),

@@ -10,6 +10,8 @@ class Flashcard {
   final DateTime dueAt;
   final bool synced;
   final DateTime updatedAt;
+  final String? topicId;
+  final String? subtopicId;
 
   Flashcard({
     required this.id,
@@ -23,6 +25,8 @@ class Flashcard {
     required this.dueAt,
     this.synced = true,
     DateTime? updatedAt,
+    this.topicId,
+    this.subtopicId,
   }) : updatedAt = updatedAt ?? DateTime.now();
 
   Flashcard copyWith({
@@ -32,6 +36,8 @@ class Flashcard {
     DateTime? dueAt,
     bool? synced,
     DateTime? updatedAt,
+    String? topicId,
+    String? subtopicId,
   }) {
     return Flashcard(
       id: id,
@@ -45,6 +51,8 @@ class Flashcard {
       dueAt: dueAt ?? this.dueAt,
       synced: synced ?? this.synced,
       updatedAt: updatedAt ?? DateTime.now(),
+      topicId: topicId ?? this.topicId,
+      subtopicId: subtopicId ?? this.subtopicId,
     );
   }
 
@@ -60,6 +68,8 @@ class Flashcard {
         'dueAt': dueAt.toIso8601String(),
         'synced': synced,
         'updatedAt': updatedAt.toIso8601String(),
+        'topicId': topicId,
+        'subtopicId': subtopicId,
       };
 
   factory Flashcard.fromMap(Map<dynamic, dynamic> map) => Flashcard(
@@ -78,5 +88,7 @@ class Flashcard {
         updatedAt: map['updatedAt'] == null
             ? null
             : DateTime.parse(map['updatedAt'] as String),
+        topicId: map['topicId'] as String?,
+        subtopicId: map['subtopicId'] as String?,
       );
 }
